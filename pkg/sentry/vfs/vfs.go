@@ -56,6 +56,8 @@ import (
 	epb "gvisor.dev/gvisor/pkg/sentry/vfs/events_go_proto"
 	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/waiter"
+	// 其他import不变
+	"qingyuppp/gvisor-test/pkg/sentry/policy"
 )
 
 // How long to wait for a mount promise before proceeding with the VFS
@@ -425,6 +427,18 @@ func (vfs *VirtualFilesystem) MknodAt(ctx context.Context, creds *auth.Credentia
 // OpenAt returns a FileDescription providing access to the file at the given
 // path. A reference is taken on the returned FileDescription.
 func (vfs *VirtualFilesystem) OpenAt(ctx context.Context, creds *auth.Credentials, pop *PathOperation, opts *OpenOptions) (*FileDescription, error) {
+	
+	// 权限策略检查
+	if policy.GlobalFilePolicyManager != nil {
+		pathStr := pop.Path.String()
+		// 判断是否为写操作
+		isWrite := opts.Flags&linux.O_WRONLY != 0 || opts.Flags&linux.O_RDWR != 0
+		if err := policy.GlobalFilePolicyManager.CheckFileAccess(pathStr, isWrite); err != nil {
+			return nil, linuxerr.EACCES
+		}
+	}
+	// ...后续保持原有逻辑...
+	
 	fsmetric.Opens.Increment()
 
 	// Remove:

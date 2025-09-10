@@ -17,6 +17,7 @@ go_binary(
     deps = [
         "//runsc/cli",
         "//runsc/version",
+        "//pkg/sentry/policy:policy",  # ← 添加这一行
     ],
 )
 
@@ -64,6 +65,7 @@ go_binary(
     deps = [
         "//runsc/cli",
         "//runsc/version",
+        "//pkg/sentry/policy:policy",  # ← 添加这一行（如果 main.go 用到了 policy）
     ],
 )
 

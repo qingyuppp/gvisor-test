@@ -171,6 +171,7 @@ go_library(
     visibility = ["//pkg/sentry:internal"],
     deps = [
         ":events_go_proto",
+        "//pkg/sentry/policy:policy",  # ← 补充这一行
         "//pkg/abi/linux",
         "//pkg/atomicbitops",
         "//pkg/bitmap",
