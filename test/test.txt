@@ -1,0 +1,2 @@
+# This file is now set to read-only permissions (chmod 444).
+a

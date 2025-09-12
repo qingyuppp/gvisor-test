@@ -273,6 +273,9 @@ func forEachCmd(cb func(cmd subcommands.Command, group string)) {
 	cb(new(cmd.State), "")
 	cb(new(cmd.Tar), "")
 	cb(new(cmd.Wait), "")
+	// custom helpers
+	cb(new(cmd.PolicyServer), "helpers")
+	cb(new(cmd.SetFilePolicy), "helpers")
 
 	// Helpers.
 	const helperGroup = "helpers"

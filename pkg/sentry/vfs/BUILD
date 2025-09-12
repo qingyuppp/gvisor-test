@@ -171,7 +171,7 @@ go_library(
     visibility = ["//pkg/sentry:internal"],
     deps = [
         ":events_go_proto",
-        "//pkg/sentry/policy:policy",  # ← 补充这一行
+        "//pkg/sentry/policy:policy",
         "//pkg/abi/linux",
         "//pkg/atomicbitops",
         "//pkg/bitmap",
@@ -202,6 +202,7 @@ go_library(
         "//pkg/usermem",
         "//pkg/waiter",
         "@org_golang_x_sys//unix:go_default_library",
+        
     ],
 )
 

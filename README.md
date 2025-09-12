@@ -1,185 +1,52 @@
-![gVisor](g3doc/logo.png)
-
-[![Build status](https://badge.buildkite.com/3b159f20b9830461a71112566c4171c0bdfd2f980a8e4c0ae6.svg?branch=master)](https://buildkite.com/gvisor/pipeline)
-[![Issue reviver](https://github.com/google/gvisor/actions/workflows/issue_reviver.yml/badge.svg)](https://github.com/google/gvisor/actions/workflows/issue_reviver.yml)
-[![CodeQL](https://github.com/google/gvisor/actions/workflows/codeql.yml/badge.svg)](https://github.com/google/gvisor/actions/workflows/codeql.yml)
-[![gVisor chat](https://badges.gitter.im/gvisor/community.png)](https://gitter.im/gvisor/community)
-[![code search](https://img.shields.io/badge/code-search-blue)](https://cs.opensource.google/gvisor/gvisor)
-
-## What is gVisor?
-
-**gVisor** provides a strong layer of isolation between running applications and
-the host operating system. It is an application kernel that implements a
-[Linux-like interface][linux]. Unlike Linux, it is written in a memory-safe
-language (Go) and runs in userspace.
-
-gVisor includes an [Open Container Initiative (OCI)][oci] runtime called `runsc`
-that makes it easy to work with existing container tooling. The `runsc` runtime
-integrates with Docker and Kubernetes, making it simple to run sandboxed
-containers.
-
-## What **isn't** gVisor?
-
-*   gVisor is **not a syscall filter** (e.g. `seccomp-bpf`), nor a wrapper over
-    Linux isolation primitives (e.g. `firejail`, AppArmor, etc.).
-*   gVisor is also **not a VM** in the everyday sense of the term (e.g.
-    VirtualBox, QEMU).
-
-**gVisor takes a distinct third approach**, providing many security benefits of
-VMs while maintaining the lower resource footprint, fast startup, and
-flexibility of regular userspace applications.
-
-## Why does gVisor exist?
-
-Containers are not a [**sandbox**][sandbox]. While containers have
-revolutionized how we develop, package, and deploy applications, using them to
-run untrusted or potentially malicious code without additional isolation is not
-a good idea. While using a single, shared kernel allows for efficiency and
-performance gains, it also means that container escape is possible with a single
-vulnerability.
-
-gVisor is an application kernel for containers. It limits the host kernel
-surface accessible to the application while still giving the application access
-to all the features it expects. Unlike most kernels, gVisor does not assume or
-require a fixed set of physical resources; instead, it leverages existing host
-kernel functionality and runs as a normal process. In other words, gVisor
-implements Linux by way of Linux.
-
-gVisor should not be confused with technologies and tools to harden containers
-against external threats, provide additional integrity checks, or limit the
-scope of access for a service. One should always be careful about what data is
-made available to a container.
-
-## Documentation
-
-User documentation and technical architecture, including quick start guides, can
-be found at [gvisor.dev][gvisor-dev].
-
-## Installing from source
-
-gVisor builds on x86_64 and ARM64. Other architectures may become available in
-the future.
-
-For the purposes of these instructions, [bazel][bazel] and other build
-dependencies are wrapped in a build container. It is possible to use
-[bazel][bazel] directly, or type `make help` for standard targets.
-
-### Requirements
-
-Make sure the following dependencies are installed:
-
-*   Linux 4.14.77+ ([older linux][old-linux])
-*   [Docker version 17.09.0 or greater][docker]
-
-### Building
-
-Build and install the `runsc` binary:
-
-```sh
+### 编译、复制和安装可执行文件
 mkdir -p bin
 make copy TARGETS=runsc DESTINATION=bin/
 sudo cp ./bin/runsc /usr/local/bin
-```
 
-To build specific libraries or binaries, you can specify the target:
+### 运行容器
+docker run --runtime=runsc -d --name policy-test -v /test:/test busybox sleep 600
 
-```sh
-make build TARGETS="//pkg/tcpip:tcpip"
-```
+### 下发策略 rw/deny/ro
+sudo runsc --root=/var/run/docker/runtime-runc/moby set-file-policy   --id=357b6e7ae24c5cdf60ce3de17c95a27350e3664cbb24175b39138ca52ad5a004   --path=/test/test.txt --perm=rw
 
-### Building directly with Bazel (without Docker)
+### 读写测试
+docker exec policy-test sh -c 'echo AAA >> /test/test.txt'
 
-Using Bazel directly isn't recommended due to the extra overhead, but in order
-to get started:
 
--   Look at the [build dockerfile](images/default/Dockerfile) for the canonical
-    list of needed dependencies.
--   Install and use [bazelisk][bazelisk]. Otherwise, make sure your bazel
-    version matches the one listed in the [.bazelversion](.bazelversion) file.
+### 方案逻辑简要总结：
 
-After setting up dependencies, using Bazel is similar to the Makefile:
+1.核心目的
+- 在运行中的 gVisor sandbox 内动态控制特定路径的文件访问权限（rw / ro / deny），使后续新打开操作即时受限。
 
-```sh
-bazel build //runsc:runsc
-```
+2.架构组成
 
-### Testing
-
-To run standard test suites, you can use:
-
-```sh
-make unit-tests
-make tests
-```
-
-To run specific tests, you can specify the target:
-
-```sh
-# Makefile
-make test TARGETS="//runsc:version_test"
-# Bazel
-bazel test //runsc:version_test
-```
-
-### Mac OS
-
-Some packages support running tests directly on macOS. At the time of this
-writing, gVisor requires bazel 8, which you can install via homebrew:
-
-```sh
-brew install bazel@8
-
-# You can then run the tests, e.g.:
-$(brew --prefix bazel@8)/bin/bazel test --macos_sdk_version=$(xcrun --show-sdk-version) -- //tools/nogo/... //tools/check{aligned,const,escape,linkname,locks,unsafe}/...
-```
-
-### Using `go get`
-
-This project uses [bazel][bazel] to build and manage dependencies. A synthetic
-`go` branch is maintained that is compatible with standard `go` tooling for
-convenience.
-
-For example, to build and install `runsc` directly from this branch:
-
-```sh
-echo "module runsc" > go.mod
-GO111MODULE=on go get gvisor.dev/gvisor/runsc@go
-CGO_ENABLED=0 GO111MODULE=on sudo -E go build -o /usr/local/bin/runsc gvisor.dev/gvisor/runsc
-```
-
-Subsequently, you can build and install the shim binary for `containerd`:
-
-```sh
-GO111MODULE=on sudo -E go build -o /usr/local/bin/containerd-shim-runsc-v1 gvisor.dev/gvisor/shim
-```
-
-Note that this branch is supported in a best effort capacity, and direct
-development on this branch is not supported. Development should occur on the
-`master` branch, which is then reflected into the `go` branch.
-
-## Community & Governance
-
-See [GOVERNANCE.md](GOVERNANCE.md) for project governance information.
-
-The [gvisor-users mailing list][gvisor-users-list] and
-[gvisor-dev mailing list][gvisor-dev-list] are good starting points for
-questions and discussion.
-
-## Security Policy
-
-See [SECURITY.md](SECURITY.md).
-
-## Contributing
-
-See [Contributing.md](CONTRIBUTING.md).
-
-[bazel]: https://bazel.build
-[docker]: https://www.docker.com
-[gvisor-users-list]: https://groups.google.com/forum/#!forum/gvisor-users
-[gvisor-dev]: https://gvisor.dev
-[gvisor-dev-list]: https://groups.google.com/forum/#!forum/gvisor-dev
-[linux]: https://en.wikipedia.org/wiki/Linux_kernel_interfaces
-[oci]: https://www.opencontainers.org
-[old-linux]: https://gvisor.dev/docs/user_guide/networking/#gso
-[sandbox]: https://en.wikipedia.org/wiki/Sandbox_(computer_security)
-[bazelisk]: https://github.com/bazelbuild/bazelisk
+- 策略存储：Sentry 内全局 GlobalFilePolicyManager（内存 map[path]perm）。
+- 强制点：VFS OpenAt 钩子在真正打开文件前检查策略。
+- 下发通道： a) HTTP + 广播（policy-server 子命令，遍历所有 sandbox 逐个 RPC）。
+b) 精简命令 set-file-policy 直接对单个 sandbox 发送控制 RPC（当前推荐测试路径）。
+- 控制 RPC：Policy.SetFilePermission 更新 Sentry 内存策略。
+3.执行链（set-file-policy）
+Host 运行命令 → 解析并定位 sandbox（通过 state 文件）→ 发送 Policy RPC → Sentry 更新 map → 后续容器内对该路径的 open 根据 perm 决定允许或拒绝：
+- rw：正常
+- ro：阻止写（O_WRONLY/O_RDWR/创建/截断）
+- deny：阻止任何 open
+4.生效特性
+- 仅影响策略应用后新的文件打开；已持有的 fd 不回溯。
+- 多容器需逐个 sandbox 下发或使用 policy-server 广播。
+- 内存态，不持久化，重启需重新下发。
+5.关键文件
+- file_policy.go：策略管理
+- vfs.go：访问拦截
+- policy.go：RPC 入口
+- sandbox.go：RPC 客户端调用封装
+- set_file_policy.go：CLI 命令
+- policy_server.go & file_policy_server.go：HTTP 广播（可选路径）
+6.使用要点
+- 必须用正确 --root 指定实际 runsc root（从 runsc-sandbox 进程的 --root= 抓取）。
+- 路径必须是容器内部视角的绝对路径。
+- 失败时查看增强的命令输出确定 sandbox 是否匹配。
+- 可扩展方向（未实现）
+- 列出已设策略
+-前缀/通配符匹配
+- 持久化/加载
+- 更细粒度权限（如 exec 单独控制）

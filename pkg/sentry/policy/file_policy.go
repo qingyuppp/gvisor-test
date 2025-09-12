@@ -3,6 +3,8 @@ package policy
 import (
 	"errors"
 	"sync"
+	"time"
+	"gvisor.dev/gvisor/pkg/log"
 )
 
 type FilePermission string
@@ -21,6 +23,12 @@ type FilePolicyManager struct {
 
 var GlobalFilePolicyManager *FilePolicyManager
 
+func init() {
+	// Initialize empty manager; no hard-coded demo rule to avoid confusion.
+	GlobalFilePolicyManager = NewFilePolicyManager()
+	log.Infof("file policy manager initialized (no default rules)")
+}
+
 func NewFilePolicyManager() *FilePolicyManager {
 	return &FilePolicyManager{
 		permission: make(map[string]FilePermission),
@@ -32,6 +40,7 @@ func (f *FilePolicyManager) SetPermission(path string, perm FilePermission) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.permission[path] = perm
+	log.Infof("policy set path=%s perm=%s at=%s", path, perm, time.Now().Format(time.RFC3339Nano))
 }
 
 // GetPermission 获取指定路径的权限，默认 rw

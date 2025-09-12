@@ -57,7 +57,7 @@ import (
 	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/waiter"
 	// 其他import不变
-	"qingyuppp/gvisor-test/pkg/sentry/policy"
+	"gvisor.dev/gvisor/pkg/sentry/policy"
 )
 
 // How long to wait for a mount promise before proceeding with the VFS

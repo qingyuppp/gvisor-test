@@ -172,6 +172,11 @@ const (
 	FsTarRootfsUpperLayer = "Fs.TarRootfsUpperLayer"
 )
 
+// Policy-related commands (see pkg/sentry/control/policy.go).
+const (
+	PolicySetFilePermission = "Policy.SetFilePermission"
+)
+
 // controller holds the control server, and is used for communication into the
 // sandbox.
 type controller struct {
@@ -214,6 +219,9 @@ func (c *controller) registerHandlers() {
 	c.srv.Register(&control.Usage{Kernel: l.k})
 	c.srv.Register(&control.Metrics{})
 	c.srv.Register(&debug{})
+
+	// Register Policy control RPCs to allow runtime updates from runsc.
+	c.srv.Register(&control.Policy{})
 
 	if eps, ok := l.k.RootNetworkNamespace().Stack().(*netstack.Stack); ok {
 		c.srv.Register(&Network{

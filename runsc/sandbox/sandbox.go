@@ -2019,6 +2019,12 @@ func (s *Sandbox) TarRootfsUpperLayer(outFD *os.File) error {
 	return nil
 }
 
+// PolicySetFilePermission updates runtime file policy in the sandbox.
+func (s *Sandbox) PolicySetFilePermission(path, perm string) error {
+	args := control.PolicySetArgs{Path: path, Permission: perm}
+	return s.call(boot.PolicySetFilePermission, &args, nil)
+}
+
 func setCloExeOnAllFDs() error {
 	f, err := os.Open("/proc/self/fd")
 	if err != nil {

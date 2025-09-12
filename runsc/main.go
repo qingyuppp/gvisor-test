@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+	
 //go:build !false
 // +build !false
 
@@ -21,18 +21,11 @@ package main
 import (
 	"gvisor.dev/gvisor/runsc/cli"
 	"gvisor.dev/gvisor/runsc/version"
-
-	"qingyuppp/gvisor-test/pkg/sentry/policy" // 新增
 )
 
 // version.Version is set dynamically, but needs to be
 // linked in the binary, so reference it here.
 var _ = version.Version()
-
-func init() {
-    policy.GlobalFilePolicyManager = policy.NewFilePolicyManager()
-    go policy.StartFilePolicyServer(policy.GlobalFilePolicyManager, ":8081")
-}
 
 func main() {
 	cli.Main()
