@@ -7,7 +7,7 @@ sudo cp ./bin/runsc /usr/local/bin
 docker run --runtime=runsc -d --name policy-test -v /test:/test busybox sleep 600
 
 ### 下发策略 rw/deny/ro
-sudo runsc --root=/var/run/docker/runtime-runc/moby set-file-policy   --id=357b6e7ae24c5cdf60ce3de17c95a27350e3664cbb24175b39138ca52ad5a004   --path=/test/test.txt --perm=rw
+sudo runsc --root=/var/run/docker/runtime-runc/moby set-file-policy   --id=d6255ae7f5fb44b00d1fea27efc8fbfa97d842d56da7139abf0f40f4c845b78b   --path=/test/test.txt --perm=rw
 
 ### 读写测试
 docker exec policy-test sh -c 'echo AAA >> /test/test.txt'
